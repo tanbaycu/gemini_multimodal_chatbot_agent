@@ -129,6 +129,7 @@ def rate_limited_response(func):
 
 @rate_limited_response
 def handle_user_input(user_input, model):
+    start_time = time.time()  # Bắt đầu đo thời gian
     sanitized_input = sanitize_input(user_input)
     chat_history = get_chat_history()
     full_prompt = f"{st.session_state.system_prompt}\n\nLịch sử trò chuyện:\n{chat_history}\n\nNgười dùng: {sanitized_input}\n\nTrợ lý:"
@@ -150,10 +151,11 @@ def handle_user_input(user_input, model):
             )
         response_tokens = count_tokens(response.text)
         st.session_state.total_tokens += response_tokens
-        return response.text, response_tokens
+        processing_time = time.time() - start_time  # Tính thời gian xử lý
+        return response.text, response_tokens, processing_time
     except Exception as e:
         st.error(f"Lỗi tạo phản hồi: {str(e)}")
-        return None, 0
+        return None, 0, 0
 
 def sanitize_input(text):
     # Loại bỏ các thẻ HTML
@@ -282,7 +284,8 @@ if api_key:
                     st.markdown(msg["content"])
                     timestamp = msg.get('timestamp', 'N/A')
                     tokens = msg.get('tokens', 'N/A')
-                    st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
+                    processing_time = msg.get('processing_time', 'N/A')
+                    st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens} | Thời gian xử lý: {processing_time:.2f}s</div>", unsafe_allow_html=True)
 
             # Xử lý input của người dùng
             prompt = st.chat_input("💬 Bạn muốn biết gì?")
@@ -301,16 +304,17 @@ if api_key:
                     })
 
                 with st.chat_message("assistant"):
-                    response, response_tokens = handle_user_input(prompt, model)
+                    response, response_tokens, processing_time = handle_user_input(prompt, model)
                     if response:
                         st.markdown(response)
                         timestamp = datetime.now().strftime("%H:%M:%S")
-                        st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | Thời gian xử lý: {processing_time:.2f}s</div>", unsafe_allow_html=True)
                         st.session_state.chat_history.append({
                             "role": "assistant",
                             "content": response,
                             "tokens": response_tokens,
-                            "timestamp": timestamp
+                            "timestamp": timestamp,
+                            "processing_time": processing_time
                         })
 
             # Cảnh báo nếu có hình ảnh nhưng không có prompt
