@@ -9,10 +9,10 @@ import json
 import time
 import re
 
-# Page configuration
-st.set_page_config(page_title="Multimodal Chat with Gemini", layout="wide", page_icon="🚀")
+# Cấu hình trang
+st.set_page_config(page_title="Trò chuyện Đa phương tiện với Gemini", layout="wide", page_icon="🚀")
 
-# Initialize session state
+# Khởi tạo trạng thái phiên
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_history" not in st.session_state:
@@ -28,7 +28,7 @@ if "model_config" not in st.session_state:
         "max_output_tokens": 2048,
     }
 if "system_prompt" not in st.session_state:
-    st.session_state.system_prompt = "You are a helpful and friendly AI assistant developed by tanbaycu. "
+    st.session_state.system_prompt = "Bạn là một trợ lý AI hữu ích và thân thiện được phát triển bởi tanbaycu. "
 if "total_tokens" not in st.session_state:
     st.session_state.total_tokens = 0
 if "theme" not in st.session_state:
@@ -44,9 +44,9 @@ GEMINI_MODELS = [
     "gemini-2.0-flash-lite-preview-02-05"
 ]
 
-MAX_TOKENS = 8192  # Assuming this is the token limit for the model
+MAX_TOKENS = 8192  # Giả sử đây là giới hạn token cho mô hình
 
-# Custom CSS
+# CSS tùy chỉnh
 def get_custom_css():
     return f"""
 <style>
@@ -84,14 +84,14 @@ def get_custom_css():
 
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
-# Utility functions
+# Các hàm tiện ích
 @st.cache_resource
 def load_model(api_key, model_name):
     try:
         genai.configure(api_key=api_key)
         return genai.GenerativeModel(model_name=model_name)
     except Exception as e:
-        st.error(f"Error initializing model: {str(e)}")
+        st.error(f"Lỗi khởi tạo mô hình: {str(e)}")
         return None
 
 @st.cache_data
@@ -110,7 +110,7 @@ def count_tokens(text):
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(text))
 
-# Add a new function to handle rate limiting
+# Thêm hàm mới để xử lý giới hạn tốc độ
 def rate_limited_response(func):
     def wrapper(*args, **kwargs):
         if 'last_request_time' not in st.session_state:
@@ -119,7 +119,7 @@ def rate_limited_response(func):
         current_time = time.time()
         time_since_last_request = current_time - st.session_state.last_request_time
         
-        if time_since_last_request < 1:  # Limit to 1 request per second
+        if time_since_last_request < 1:  # Giới hạn 1 yêu cầu mỗi giây
             time.sleep(1 - time_since_last_request)
         
         result = func(*args, **kwargs)
@@ -131,14 +131,14 @@ def rate_limited_response(func):
 def handle_user_input(user_input, model):
     sanitized_input = sanitize_input(user_input)
     chat_history = get_chat_history()
-    full_prompt = f"{st.session_state.system_prompt}\n\nChat history:\n{chat_history}\n\nUser: {sanitized_input}\n\nAssistant:"
+    full_prompt = f"{st.session_state.system_prompt}\n\nLịch sử trò chuyện:\n{chat_history}\n\nNgười dùng: {sanitized_input}\n\nTrợ lý:"
     
     inputs = [full_prompt]
     if st.session_state.image:
         inputs.append(st.session_state.image)
     
     try:
-        with st.spinner('🤔 Generating response...'):
+        with st.spinner('🤔 Đang tạo phản hồi...'):
             response = model.generate_content(
                 inputs,
                 generation_config=genai.types.GenerationConfig(
@@ -152,13 +152,13 @@ def handle_user_input(user_input, model):
         st.session_state.total_tokens += response_tokens
         return response.text, response_tokens
     except Exception as e:
-        st.error(f"Error generating response: {str(e)}")
+        st.error(f"Lỗi tạo phản hồi: {str(e)}")
         return None, 0
 
 def sanitize_input(text):
-    # Remove any HTML tags
+    # Loại bỏ các thẻ HTML
     text = re.sub('<[^<]+?>', '', text)
-    # Escape special characters
+    # Escape các ký tự đặc biệt
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
     return text
 
@@ -177,45 +177,45 @@ def load_chat_session(session_data):
     st.session_state.total_tokens = data["total_tokens"]
 
 def is_valid_api_key(api_key):
-    # This is a basic check. You might want to implement a more robust validation.
+    # Đây là kiểm tra cơ bản. Bạn có thể muốn triển khai một xác thực mạnh mẽ hơn.
     return bool(api_key) and len(api_key) > 10
 
-# Sidebar
+# Thanh bên
 with st.sidebar:
-    st.title("Settings")
+    st.title("Cài đặt")
     
     if 'api_key' not in st.session_state:
         st.session_state.api_key = ''
-    api_key = st.text_input("Enter Google API Key", type="password", value=st.session_state.api_key)
+    api_key = st.text_input("Nhập Google API Key", type="password", value=st.session_state.api_key)
     
-    with st.expander("🛠️ Model Customization", expanded=False):
-        selected_model = st.selectbox("Select Gemini model", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
+    with st.expander("🛠️ Tùy chỉnh Mô hình", expanded=False):
+        selected_model = st.selectbox("Chọn mô hình Gemini", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
         st.session_state.model_config["model_name"] = selected_model
         
-        st.session_state.model_config["temperature"] = st.slider("🌡️ Temperature", min_value=0.0, max_value=1.0, value=st.session_state.model_config["temperature"], step=0.1)
+        st.session_state.model_config["temperature"] = st.slider("🌡️ Độ sáng tạo", min_value=0.0, max_value=1.0, value=st.session_state.model_config["temperature"], step=0.1)
         st.session_state.model_config["top_p"] = st.slider("🎯 Top P", min_value=0.0, max_value=1.0, value=st.session_state.model_config["top_p"], step=0.1)
         st.session_state.model_config["top_k"] = st.number_input("🔝 Top K", min_value=1, max_value=100, value=st.session_state.model_config["top_k"])
-        st.session_state.model_config["max_output_tokens"] = st.number_input("📏 Max Output Tokens", min_value=1, max_value=8192, value=st.session_state.model_config["max_output_tokens"])
+        st.session_state.model_config["max_output_tokens"] = st.number_input("📏 Số token tối đa", min_value=1, max_value=8192, value=st.session_state.model_config["max_output_tokens"])
     
-    with st.expander("📝 Prompt Customization", expanded=False):
+    with st.expander("📝 Tùy chỉnh Prompt", expanded=False):
         st.session_state.system_prompt = st.text_area("System Prompt", value=st.session_state.system_prompt, height=100)
     
-    st.session_state.max_history = st.slider("🧠 Max messages in history", min_value=1, max_value=20, value=5)
+    st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=20, value=5)
     
-    uploaded_file = st.file_uploader("📸 Upload an image...", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📸 Tải lên một hình ảnh...", type=["jpg", "jpeg", "png"])
 
     if uploaded_file:
         st.session_state.image = Image.open(uploaded_file)
-        st.image(st.session_state.image, caption='Uploaded Image', use_column_width=True)
-        st.markdown(get_image_download_link(st.session_state.image, "uploaded_image.png", "📥 Download Image"), unsafe_allow_html=True)
+        st.image(st.session_state.image, caption='Hình ảnh đã tải lên', use_column_width=True)
+        st.markdown(get_image_download_link(st.session_state.image, "hình_ảnh_đã_tải.png", "📥 Tải xuống hình ảnh"), unsafe_allow_html=True)
 
-    # Hamburger menu for additional options
-    with st.expander("☰ Advanced Options", expanded=False):
-        st.subheader("Chat Session Management")
+    # Menu hamburger cho các tùy chọn bổ sung
+    with st.expander("☰ Tùy chọn nâng cao", expanded=False):
+        st.subheader("Quản lý phiên trò chuyện")
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🗑️ Clear", key="clear_history"):
+            if st.button("🗑️ Xóa", key="clear_history"):
                 st.session_state.messages = []
                 st.session_state.chat_history = []
                 st.session_state.image = None
@@ -223,52 +223,52 @@ with st.sidebar:
                 st.rerun()
 
         with col2:
-            if st.button("📥 Export", key="export_history"):
+            if st.button("📥 Xuất", key="export_history"):
                 chat_history = "\n".join([f"{msg['role']} ({msg.get('timestamp', 'N/A')}): {msg['content']}" for msg in st.session_state.chat_history])
                 st.download_button(
-                    label="📥 Download",
+                    label="📥 Tải xuống",
                     data=chat_history,
-                    file_name="chat_history.txt",
+                    file_name="lich_su_tro_chuyen.txt",
                     mime="text/plain"
                 )
         
-        st.subheader("Save and Load Chat Session")
-        if st.button("💾 Save"):
+        st.subheader("Lưu và tải phiên trò chuyện")
+        if st.button("💾 Lưu"):
             session_data = save_chat_session()
             st.download_button(
-                label="📥 Download Chat Session",
+                label="📥 Tải xuống phiên trò chuyện",
                 data=session_data,
-                file_name="chat_session.json",
+                file_name="phien_tro_chuyen.json",
                 mime="application/json"
             )
         
-        uploaded_session = st.file_uploader("📤 Upload", type=["json"])
+        uploaded_session = st.file_uploader("📤 Tải lên", type=["json"])
         if uploaded_session is not None:
             session_data = uploaded_session.getvalue().decode("utf-8")
             load_chat_session(session_data)
-            st.success("Chat session loaded successfully!")
+            st.success("Đã tải phiên trò chuyện thành công!")
 
-        st.subheader("Model Information")
+        st.subheader("Thông tin Mô hình")
         st.info(f"""
-        - 🤖 Model: {st.session_state.model_config['model_name']}
-        - 🌡️ Temperature: {st.session_state.model_config['temperature']:.2f}
+        - 🤖 Mô hình: {st.session_state.model_config['model_name']}
+        - 🌡️ Độ sáng tạo: {st.session_state.model_config['temperature']:.2f}
         - 🎯 Top P: {st.session_state.model_config['top_p']:.2f}
         - 🔝 Top K: {st.session_state.model_config['top_k']}
-        - 📏 Max Output Tokens: {st.session_state.model_config['max_output_tokens']}
-        - 🧠 Messages in history: {st.session_state.max_history}
-        - 💬 Total messages: {len(st.session_state.messages)}
-        - 🔢 Total tokens: {st.session_state.total_tokens}
+        - 📏 Số token tối đa: {st.session_state.model_config['max_output_tokens']}
+        - 🧠 Số lượng tin nhắn trong lịch sử: {st.session_state.max_history}
+        - 💬 Tổng số tin nhắn: {len(st.session_state.messages)}
+        - 🔢 Tổng số token: {st.session_state.total_tokens}
         """)
 
-        # Token usage progress bar
-        st.subheader("Token Usage")
+        # Thanh tiến trình token
+        st.subheader("Sử dụng Token")
         progress = st.session_state.total_tokens / MAX_TOKENS
         st.progress(progress)
-        st.text(f"{st.session_state.total_tokens}/{MAX_TOKENS} tokens used")
+        st.text(f"{st.session_state.total_tokens}/{MAX_TOKENS} tokens đã sử dụng")
 
-# Main content
+# Nội dung chính
 st.title("🚀 Gemini Agent")
-st.caption("Experience the power of the latest Gemini models with advanced customization. 🌟")
+st.caption("Trải nghiệm sức mạnh của các mô hình Gemini mới nhất với tùy chỉnh nâng cao. 🌟")
 
 if api_key:
     if is_valid_api_key(api_key):
@@ -276,7 +276,7 @@ if api_key:
         model = load_model(api_key, st.session_state.model_config["model_name"])
         
         if model:
-            # Display chat history
+            # Hiển thị lịch sử trò chuyện
             for msg in st.session_state.chat_history:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
@@ -284,8 +284,8 @@ if api_key:
                     tokens = msg.get('tokens', 'N/A')
                     st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
 
-            # Handle user input
-            prompt = st.chat_input("💬 What would you like to know?")
+            # Xử lý input của người dùng
+            prompt = st.chat_input("💬 Bạn muốn biết gì?")
             if prompt:
                 with st.chat_message("user"):
                     st.markdown(sanitize_input(prompt))
@@ -313,17 +313,17 @@ if api_key:
                             "timestamp": timestamp
                         })
 
-            # Warning if there's an image but no prompt
+            # Cảnh báo nếu có hình ảnh nhưng không có prompt
             if st.session_state.image and not prompt:
-                st.warning("⚠️ Please enter a question to go along with the image.")
+                st.warning("⚠️ Vui lòng nhập câu hỏi để đi kèm với hình ảnh.")
         else:
-            st.error("❌ Unable to initialize the model. Please check your API key and try again.")
+            st.error("❌ Không thể khởi tạo mô hình. Vui lòng kiểm tra API key và thử lại.")
     else:
-        st.error("❌ Invalid API key. Please enter a valid Google API Key.")
+        st.error("❌ API key không hợp lệ. Vui lòng nhập một Google API Key hợp lệ.")
 else:
-    st.warning("🔑 Please enter your Google API Key in the sidebar to start chatting.")
+    st.warning("🔑 Vui lòng nhập Google API Key của bạn ở thanh bên để bắt đầu trò chuyện.")
 
 # Footer
 st.markdown("---")
-st.markdown("Developed with ❤️ by tanbaycu")
+st.markdown("Được phát triển với ❤️ bởi tanbaycu")
 
