@@ -376,7 +376,7 @@ with st.sidebar:
         with st.expander("📝 Tùy chỉnh Prompt", expanded=False):
             st.session_state.system_prompt = st.text_area("System Prompt", value=st.session_state.system_prompt, height=100)
         
-        st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=20, value=5)
+        st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=100, value=5)
         
         uploaded_file = st.file_uploader("📸 Tải lên một hình ảnh...", type=["jpg", "jpeg", "png"])
 
