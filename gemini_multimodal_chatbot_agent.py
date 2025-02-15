@@ -301,20 +301,51 @@ with st.sidebar:
             if st.button("Đăng ký"):
                 if register_user(reg_username, reg_password, reg_api_key, reg_email):
                     st.success("Đăng ký thành công! Vui lòng đăng nhập.")
+                    current_date = datetime.now().strftime("%d/%m/%Y")
                     
                     # Gửi email xác nhận đăng ký
-                    email_subject = "Xác nhận đăng ký tài khoản Gemini Agent"
+                    email_subject = "Xác nhận đăng ký tài khoản Gemini Agent - Chào mừng bạn!"
                     email_body = f"""
                     <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background-color: #4CAF50; color: white; padding: 10px; text-align: center; }}
+                            .content {{ padding: 20px; background-color: #f9f9f9; }}
+                            .footer {{ text-align: center; margin-top: 20px; font-size: 0.8em; color: #777; }}
+                        </style>
+                    </head>
                     <body>
-                        <h2>Chào mừng bạn đến với Gemini Agent!</h2>
-                        <p>Cảm ơn bạn đã đăng ký tài khoản. Dưới đây là thông tin đăng ký của bạn:</p>
-                        <ul>
-                            <li><strong>Tên đăng nhập:</strong> {reg_username}</li>
-                            <li><strong>Email:</strong> {reg_email}</li>
-                        </ul>
-                        <p>Vui lòng giữ thông tin này an toàn và không chia sẻ với người khác.</p>
-                        <p>Chúc bạn có trải nghiệm tuyệt vời với Gemini Agent!</p>
+                        <div class="container">
+                            <div class="header">
+                                <h1>Chào mừng đến với Gemini Agent</h1>
+                            </div>
+                            <div class="content">
+                                <p>Kính gửi {reg_username},</p>
+                                <p>Chúng tôi xin chân thành cảm ơn bạn đã đăng ký tài khoản Gemini Agent. Chúng tôi rất vui mừng được chào đón bạn tham gia vào cộng đồng của chúng tôi.</p>
+                                <p>Dưới đây là thông tin đăng ký của bạn:</p>
+                                <ul>
+                                    <li><strong>Tên đăng nhập:</strong> {reg_username}</li>
+                                    <li><strong>Email:</strong> {reg_email}</li>
+                                    <li><strong>Ngày đăng ký:</strong> {current_date}</li>
+                                </ul>
+                                <p>Với tài khoản Gemini Agent, bạn sẽ có cơ hội:</p>
+                                <ul>
+                                    <li>Trải nghiệm sức mạnh của các mô hình AI tiên tiến nhất</li>
+                                    <li>Tùy chỉnh và tối ưu hóa mô hình theo nhu cầu cụ thể của bạn</li>
+                                    <li>Tham gia vào cộng đồng người dùng năng động và sáng tạo</li>
+                                </ul>
+                                <p>Chúng tôi cam kết mang đến cho bạn trải nghiệm tuyệt vời nhất với Gemini Agent. Nếu bạn có bất kỳ câu hỏi hoặc cần hỗ trợ, đừng ngần ngại liên hệ với đội ngũ hỗ trợ của chúng tôi.</p>
+                                <p>Một lần nữa, chào mừng bạn đến với Gemini Agent. Chúng tôi rất mong được đồng hành cùng bạn trong hành trình khám phá và sáng tạo với AI.</p>
+                                <p>Trân trọng,</p>
+                                <p>Đội ngũ Gemini Agent</p>
+                            </div>
+                            <div class="footer">
+                                <p>© 2025 Gemini Agent. Bảo lưu mọi quyền.</p>
+                                <p>Email này được gửi tự động, vui lòng không trả lời.</p>
+                            </div>
+                        </div>
                     </body>
                     </html>
                     """
