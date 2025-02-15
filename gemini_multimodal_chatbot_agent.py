@@ -184,10 +184,7 @@ def is_valid_api_key(api_key):
 
 # Hàm mới để định dạng thời gian xử lý
 def format_processing_time(seconds):
-    if seconds < 0.1:
-        return f"{seconds*1000:.0f}ms"
-    else:
-        return f"{seconds:.1f}s"
+    return f"{seconds:.1f}s"
 
 # Thanh bên
 with st.sidebar:
@@ -319,22 +316,19 @@ if api_key:
                 })
 
                 with st.chat_message("assistant"):
-                    response_start_time = time.time()
                     response, response_tokens, processing_time = handle_user_input(prompt, model)
                     if response:
                         st.markdown(response)
                         timestamp = datetime.now().strftime("%H:%M:%S")
                         formatted_time = format_processing_time(processing_time)
-                        total_time = format_processing_time(time.time() - response_start_time)
-                        st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | Xử lý: {formatted_time} | Tổng: {total_time}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | {formatted_time}</div>", unsafe_allow_html=True)
                         
                         st.session_state.chat_history.append({
                             "role": "assistant",
                             "content": response,
                             "tokens": response_tokens,
                             "timestamp": timestamp,
-                            "processing_time": processing_time,
-                            "total_time": time.time() - response_start_time
+                            "processing_time": processing_time
                         })
 
             # Cảnh báo nếu có hình ảnh nhưng không có prompt
