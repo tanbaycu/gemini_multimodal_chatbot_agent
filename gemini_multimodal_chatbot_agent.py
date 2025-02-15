@@ -6,6 +6,8 @@ import base64
 from datetime import datetime
 import tiktoken
 import json
+import time
+import re
 
 # Page configuration
 st.set_page_config(page_title="Multimodal Chat with Gemini", layout="wide", page_icon="🚀")
@@ -58,6 +60,11 @@ def get_custom_css():
         margin-bottom: 1rem; 
         display: flex;
         font-size: {{'0.8rem' if st.session_state.font_size == 'small' else '1rem' if st.session_state.font_size == 'medium' else '1.2rem'}};
+        animation: fadeIn 0.5s;
+    }}
+    @keyframes fadeIn {{
+        0% {{ opacity: 0; }}
+        100% {{ opacity: 1; }}
     }}
     .chat-message.user {{background-color: {'#e6f3ff' if st.session_state.theme == 'light' else '#2b313e'};}}
     .chat-message.bot {{background-color: {'#f0f0f0' if st.session_state.theme == 'light' else '#3c4354'};}}
@@ -67,6 +74,11 @@ def get_custom_css():
     .chat-message .timestamp {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; text-align: right; margin-top: 0.5rem;}}
     .token-info {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; margin-top: 0.5rem;}}
     body {{background-color: {'#ffffff' if st.session_state.theme == 'light' else '#1e1e1e'}; color: {'#000000' if st.session_state.theme == 'light' else '#ffffff'};}}
+    .stAlert {{animation: slideIn 0.5s;}}
+    @keyframes slideIn {{
+        0% {{ transform: translateY(-100%); }}
+        100% {{ transform: translateY(0); }}
+    }}
 </style>
 """
 
@@ -98,30 +110,57 @@ def count_tokens(text):
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(text))
 
+# Add a new function to handle rate limiting
+def rate_limited_response(func):
+    def wrapper(*args, **kwargs):
+        if 'last_request_time' not in st.session_state:
+            st.session_state.last_request_time = 0
+        
+        current_time = time.time()
+        time_since_last_request = current_time - st.session_state.last_request_time
+        
+        if time_since_last_request < 1:  # Limit to 1 request per second
+            time.sleep(1 - time_since_last_request)
+        
+        result = func(*args, **kwargs)
+        st.session_state.last_request_time = time.time()
+        return result
+    return wrapper
+
+@rate_limited_response
 def handle_user_input(user_input, model):
+    sanitized_input = sanitize_input(user_input)
     chat_history = get_chat_history()
-    full_prompt = f"{st.session_state.system_prompt}\n\nChat history:\n{chat_history}\n\nUser: {user_input}\n\nAssistant:"
+    full_prompt = f"{st.session_state.system_prompt}\n\nChat history:\n{chat_history}\n\nUser: {sanitized_input}\n\nAssistant:"
     
     inputs = [full_prompt]
     if st.session_state.image:
         inputs.append(st.session_state.image)
     
     try:
-        response = model.generate_content(
-            inputs,
-            generation_config=genai.types.GenerationConfig(
-                temperature=st.session_state.model_config["temperature"],
-                top_p=st.session_state.model_config["top_p"],
-                top_k=st.session_state.model_config["top_k"],
-                max_output_tokens=st.session_state.model_config["max_output_tokens"],
+        with st.spinner('🤔 Generating response...'):
+            response = model.generate_content(
+                inputs,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=st.session_state.model_config["temperature"],
+                    top_p=st.session_state.model_config["top_p"],
+                    top_k=st.session_state.model_config["top_k"],
+                    max_output_tokens=st.session_state.model_config["max_output_tokens"],
+                )
             )
-        )
         response_tokens = count_tokens(response.text)
         st.session_state.total_tokens += response_tokens
         return response.text, response_tokens
     except Exception as e:
         st.error(f"Error generating response: {str(e)}")
         return None, 0
+
+def sanitize_input(text):
+    # Remove any HTML tags
+    text = re.sub('<[^<]+?>', '', text)
+    # Escape special characters
+    text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+    return text
 
 def save_chat_session():
     session_data = {
@@ -137,11 +176,17 @@ def load_chat_session(session_data):
     st.session_state.chat_history = data["chat_history"]
     st.session_state.total_tokens = data["total_tokens"]
 
+def is_valid_api_key(api_key):
+    # This is a basic check. You might want to implement a more robust validation.
+    return bool(api_key) and len(api_key) > 10
+
 # Sidebar
 with st.sidebar:
     st.title("Settings")
     
-    api_key = st.text_input("Enter Google API Key", type="password")
+    if 'api_key' not in st.session_state:
+        st.session_state.api_key = ''
+    api_key = st.text_input("Enter Google API Key", type="password", value=st.session_state.api_key)
     
     with st.expander("🛠️ Model Customization", expanded=False):
         selected_model = st.selectbox("Select Gemini model", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
@@ -226,35 +271,36 @@ st.title("🚀 Gemini Agent")
 st.caption("Experience the power of the latest Gemini models with advanced customization. 🌟")
 
 if api_key:
-    model = load_model(api_key, st.session_state.model_config["model_name"])
-    
-    if model:
-        # Display chat history
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-                timestamp = msg.get('timestamp', 'N/A')
-                tokens = msg.get('tokens', 'N/A')
-                st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
+    if is_valid_api_key(api_key):
+        st.session_state.api_key = api_key
+        model = load_model(api_key, st.session_state.model_config["model_name"])
+        
+        if model:
+            # Display chat history
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+                    timestamp = msg.get('timestamp', 'N/A')
+                    tokens = msg.get('tokens', 'N/A')
+                    st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
 
-        # Handle user input
-        prompt = st.chat_input("💬 What would you like to know?")
-        if prompt:
-            with st.chat_message("user"):
-                st.markdown(prompt)
-                tokens = count_tokens(prompt)
-                timestamp = datetime.now().strftime("%H:%M:%S")
-                st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
-                st.session_state.total_tokens += tokens
-                st.session_state.chat_history.append({
-                    "role": "user",
-                    "content": prompt,
-                    "tokens": tokens,
-                    "timestamp": timestamp
-                })
+            # Handle user input
+            prompt = st.chat_input("💬 What would you like to know?")
+            if prompt:
+                with st.chat_message("user"):
+                    st.markdown(sanitize_input(prompt))
+                    tokens = count_tokens(prompt)
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {tokens}</div>", unsafe_allow_html=True)
+                    st.session_state.total_tokens += tokens
+                    st.session_state.chat_history.append({
+                        "role": "user",
+                        "content": sanitize_input(prompt),
+                        "tokens": tokens,
+                        "timestamp": timestamp
+                    })
 
-            with st.chat_message("assistant"):
-                with st.spinner('🤔 Generating response...'):
+                with st.chat_message("assistant"):
                     response, response_tokens = handle_user_input(prompt, model)
                     if response:
                         st.markdown(response)
@@ -267,11 +313,13 @@ if api_key:
                             "timestamp": timestamp
                         })
 
-        # Warning if there's an image but no prompt
-        if st.session_state.image and not prompt:
-            st.warning("⚠️ Please enter a question to go along with the image.")
+            # Warning if there's an image but no prompt
+            if st.session_state.image and not prompt:
+                st.warning("⚠️ Please enter a question to go along with the image.")
+        else:
+            st.error("❌ Unable to initialize the model. Please check your API key and try again.")
     else:
-        st.error("❌ Unable to initialize the model. Please check your API key and try again.")
+        st.error("❌ Invalid API key. Please enter a valid Google API Key.")
 else:
     st.warning("🔑 Please enter your Google API Key in the sidebar to start chatting.")
 
