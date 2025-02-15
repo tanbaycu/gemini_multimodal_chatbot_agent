@@ -8,14 +8,6 @@ import tiktoken
 import json
 import time
 import re
-import os
-import logging
-from cryptography.fernet import Fernet
-import matplotlib.pyplot as plt
-
-# Cấu hình logging
-logging.basicConfig(filename='chatbot.log', level=logging.INFO, 
-                    format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Cấu hình trang
 st.set_page_config(page_title="Trò chuyện Đa phương tiện với Gemini", layout="wide", page_icon="🚀")
@@ -43,10 +35,6 @@ if "theme" not in st.session_state:
     st.session_state.theme = "light"
 if "font_size" not in st.session_state:
     st.session_state.font_size = "medium"
-if "sessions" not in st.session_state:
-    st.session_state.sessions = {}
-if "current_session" not in st.session_state:
-    st.session_state.current_session = "Mặc định"
 
 GEMINI_MODELS = [
     "gemini-1.5-flash-latest",
@@ -58,28 +46,14 @@ GEMINI_MODELS = [
 
 MAX_TOKENS = 8192  # Giả sử đây là giới hạn token cho mô hình
 
-# Cải thiện giao diện người dùng
+# CSS tùy chỉnh
 def get_custom_css():
     return f"""
 <style>
-    .stButton > button {{
-        width: 100%;
-        transition: all 0.3s ease;
-    }}
-    .stButton > button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }}
-    .stTextInput > div > div > input {{
-        background-color: {'#f0f2f6' if st.session_state.theme == 'light' else '#2b313e'};
-    }}
-    .sidebar .stButton > button {{
-        background-color: #4CAF50;
-        color: white;
-    }}
-    .sidebar .stButton > button:hover {{
-        background-color: #45a049;
-    }}
+    .stButton > button {{width: 100%;}}
+    .stTextInput > div > div > input {{background-color: {'#f0f2f6' if st.session_state.theme == 'light' else '#2b313e'};}}
+    .sidebar .stButton > button {{background-color: #4CAF50; color: white;}}
+    .sidebar .stButton > button:hover {{background-color: #45a049;}}
     .chat-message {{
         padding: 1rem; 
         border-radius: 0.5rem; 
@@ -92,75 +66,31 @@ def get_custom_css():
         0% {{ opacity: 0; }}
         100% {{ opacity: 1; }}
     }}
-    .chat-message.user {{
-        background-color: {'#e6f3ff' if st.session_state.theme == 'light' else '#2b313e'};
-    }}
-    .chat-message.bot {{
-        background-color: {'#f0f0f0' if st.session_state.theme == 'light' else '#3c4354'};
-    }}
-    .chat-message .avatar {{
-        width: 15%;
-        padding-right: 0.5rem;
-    }}
-    .chat-message .avatar img {{
-        max-width: 40px;
-        max-height: 40px;
-        border-radius: 50%;
-    }}
-    .chat-message .message {{
-        width: 85%;
-        padding: 0 1.5rem;
-    }}
-    .chat-message .timestamp {{
-        font-size: 0.8em;
-        color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'};
-        text-align: right;
-        margin-top: 0.5rem;
-    }}
-    .token-info {{
-        font-size: 0.8em;
-        color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'};
-        margin-top: 0.5rem;
-    }}
-    body {{
-        transition: background-color 0.3s ease, color 0.3s ease;
-        background-color: {'#ffffff' if st.session_state.theme == 'light' else '#1e1e1e'};
-        color: {'#000000' if st.session_state.theme == 'light' else '#ffffff'};
-    }}
-    .stAlert {{
-        animation: slideIn 0.5s;
-    }}
+    .chat-message.user {{background-color: {'#e6f3ff' if st.session_state.theme == 'light' else '#2b313e'};}}
+    .chat-message.bot {{background-color: {'#f0f0f0' if st.session_state.theme == 'light' else '#3c4354'};}}
+    .chat-message .avatar {{width: 15%; padding-right: 0.5rem;}}
+    .chat-message .avatar img {{max-width: 40px; max-height: 40px; border-radius: 50%;}}
+    .chat-message .message {{width: 85%; padding: 0 1.5rem;}}
+    .chat-message .timestamp {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; text-align: right; margin-top: 0.5rem;}}
+    .token-info {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; margin-top: 0.5rem;}}
+    body {{background-color: {'#ffffff' if st.session_state.theme == 'light' else '#1e1e1e'}; color: {'#000000' if st.session_state.theme == 'light' else '#ffffff'};}}
+    .stAlert {{animation: slideIn 0.5s;}}
     @keyframes slideIn {{
         0% {{ transform: translateY(-100%); }}
         100% {{ transform: translateY(0); }}
-    }}
-    
-    /* Cải thiện khả năng phản hồi trên các thiết bị di động */
-    @media (max-width: 768px) {{
-        .chat-message {{
-            flex-direction: column;
-        }}
-        .chat-message .avatar {{
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }}
-        .chat-message .message {{
-            width: 100%;
-        }}
     }}
 </style>
 """
 
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
-# Tối ưu hóa hiệu suất
+# Các hàm tiện ích
 @st.cache_resource
 def load_model(api_key, model_name):
     try:
         genai.configure(api_key=api_key)
         return genai.GenerativeModel(model_name=model_name)
     except Exception as e:
-        logging.error(f"Lỗi khởi tạo mô hình: {str(e)}")
         st.error(f"Lỗi khởi tạo mô hình: {str(e)}")
         return None
 
@@ -172,12 +102,15 @@ def get_image_download_link(_img, filename, text):
     href = f'<a href="data:file/png;base64,{img_str}" download="{filename}">{text}</a>'
     return href
 
+def get_chat_history():
+    return "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history[-st.session_state.max_history:]])
+
 @st.cache_data
 def count_tokens(text):
     encoding = tiktoken.get_encoding("cl100k_base")
     return len(encoding.encode(text))
 
-# Cải thiện cơ chế giới hạn tốc độ
+# Thêm hàm mới để xử lý giới hạn tốc độ
 def rate_limited_response(func):
     def wrapper(*args, **kwargs):
         if 'last_request_time' not in st.session_state:
@@ -186,55 +119,14 @@ def rate_limited_response(func):
         current_time = time.time()
         time_since_last_request = current_time - st.session_state.last_request_time
         
-        if time_since_last_request < 0.5:  # Giới hạn 2 yêu cầu mỗi giây
-            time.sleep(0.5 - time_since_last_request)
+        if time_since_last_request < 1:  # Giới hạn 1 yêu cầu mỗi giây
+            time.sleep(1 - time_since_last_request)
         
         result = func(*args, **kwargs)
         st.session_state.last_request_time = time.time()
         return result
     return wrapper
 
-# Quản lý phiên
-def save_session(session_name):
-    st.session_state.sessions[session_name] = {
-        "messages": st.session_state.messages,
-        "chat_history": st.session_state.chat_history,
-        "total_tokens": st.session_state.total_tokens,
-        "model_config": st.session_state.model_config,
-        "system_prompt": st.session_state.system_prompt
-    }
-    logging.info(f"Đã lưu phiên '{session_name}'")
-    st.success(f"Đã lưu phiên '{session_name}'")
-
-def load_session(session_name):
-    if session_name in st.session_state.sessions:
-        session_data = st.session_state.sessions[session_name]
-        st.session_state.messages = session_data["messages"]
-        st.session_state.chat_history = session_data["chat_history"]
-        st.session_state.total_tokens = session_data["total_tokens"]
-        st.session_state.model_config = session_data["model_config"]
-        st.session_state.system_prompt = session_data["system_prompt"]
-        st.session_state.current_session = session_name
-        logging.info(f"Đã tải phiên '{session_name}'")
-        st.success(f"Đã tải phiên '{session_name}'")
-    else:
-        logging.warning(f"Không tìm thấy phiên '{session_name}'")
-        st.error(f"Không tìm thấy phiên '{session_name}'")
-
-def search_chat_history(query):
-    results = []
-    for msg in st.session_state.chat_history:
-        if query.lower() in msg['content'].lower():
-            results.append(msg)
-    return results
-
-# Xử lý lỗi và phản hồi
-def handle_error(error_message):
-    logging.error(error_message)
-    st.error(f"Lỗi: {error_message}")
-    st.info("Vui lòng thử lại hoặc liên hệ hỗ trợ nếu lỗi vẫn tiếp tục.")
-
-# Hàm xử lý input của người dùng (đã được cải tiến)
 @rate_limited_response
 def handle_user_input(user_input, model):
     start_time = time.time()
@@ -260,12 +152,9 @@ def handle_user_input(user_input, model):
         response_tokens = count_tokens(response.text)
         st.session_state.total_tokens += response_tokens
         processing_time = time.time() - start_time
-        logging.info(f"Phản hồi được tạo trong {processing_time:.2f} giây, sử dụng {response_tokens} tokens")
         return response.text, response_tokens, processing_time
     except Exception as e:
-        error_message = f"Lỗi tạo phản hồi: {str(e)}"
-        logging.error(error_message)
-        handle_error(error_message)
+        st.error(f"Lỗi tạo phản hồi: {str(e)}")
         return None, 0, 0
 
 def sanitize_input(text):
@@ -275,20 +164,35 @@ def sanitize_input(text):
     text = text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
     return text
 
-def get_chat_history():
-    return "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history[-st.session_state.max_history:]])
+def save_chat_session():
+    session_data = {
+        "messages": st.session_state.messages,
+        "chat_history": st.session_state.chat_history,
+        "total_tokens": st.session_state.total_tokens
+    }
+    return json.dumps(session_data)
 
-# Thanh bên (với các cải tiến)
+def load_chat_session(session_data):
+    data = json.loads(session_data)
+    st.session_state.messages = data["messages"]
+    st.session_state.chat_history = data["chat_history"]
+    st.session_state.total_tokens = data["total_tokens"]
+
+def is_valid_api_key(api_key):
+    # Đây là kiểm tra cơ bản. Bạn có thể muốn triển khai một xác thực mạnh mẽ hơn.
+    return bool(api_key) and len(api_key) > 10
+
+# Hàm mới để định dạng thời gian xử lý
+def format_processing_time(seconds):
+    return f"{seconds:.1f}s"
+
+# Thanh bên
 with st.sidebar:
     st.title("Cài đặt")
     
     if 'api_key' not in st.session_state:
         st.session_state.api_key = ''
     api_key = st.text_input("Nhập Google API Key", type="password", value=st.session_state.api_key)
-    
-    # Chế độ tối/sáng
-    theme = st.radio("Chọn chủ đề", ["Sáng", "Tối"])
-    st.session_state.theme = "light" if theme == "Sáng" else "dark"
     
     with st.expander("🛠️ Tùy chỉnh Mô hình", expanded=False):
         selected_model = st.selectbox("Chọn mô hình Gemini", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
@@ -302,7 +206,7 @@ with st.sidebar:
     with st.expander("📝 Tùy chỉnh Prompt", expanded=False):
         st.session_state.system_prompt = st.text_area("System Prompt", value=st.session_state.system_prompt, height=100)
     
-    st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=50, value=5)
+    st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=20, value=5)
     
     uploaded_file = st.file_uploader("📸 Tải lên một hình ảnh...", type=["jpg", "jpeg", "png"])
 
@@ -311,47 +215,69 @@ with st.sidebar:
         st.image(st.session_state.image, caption='Hình ảnh đã tải lên', use_column_width=True)
         st.markdown(get_image_download_link(st.session_state.image, "hình_ảnh_đã_tải.png", "📥 Tải xuống hình ảnh"), unsafe_allow_html=True)
 
-    # Quản lý phiên
-    with st.expander("💾 Quản lý phiên", expanded=False):
-        session_name = st.text_input("Tên phiên")
+    # Menu hamburger cho các tùy chọn bổ sung
+    with st.expander("☰ Tùy chọn nâng cao", expanded=False):
+        st.subheader("Quản lý phiên trò chuyện")
+        
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("Lưu phiên"):
-                if session_name:
-                    save_session(session_name)
-                else:
-                    st.warning("Vui lòng nhập tên phiên")
+            if st.button("🗑️ Xóa", key="clear_history"):
+                st.session_state.messages = []
+                st.session_state.chat_history = []
+                st.session_state.image = None
+                st.session_state.total_tokens = 0
+                st.rerun()
+
         with col2:
-            if st.button("Tải phiên"):
-                if session_name:
-                    load_session(session_name)
-                else:
-                    st.warning("Vui lòng nhập tên phiên")
+            if st.button("📥 Xuất", key="export_history"):
+                chat_history = "\n".join([f"{msg['role']} ({msg.get('timestamp', 'N/A')}): {msg['content']}" for msg in st.session_state.chat_history])
+                st.download_button(
+                    label="📥 Tải xuống",
+                    data=chat_history,
+                    file_name="lich_su_tro_chuyen.txt",
+                    mime="text/plain"
+                )
         
-        if st.session_state.sessions:
-            selected_session = st.selectbox("Chọn phiên để tải", list(st.session_state.sessions.keys()))
-            if st.button("Tải phiên đã chọn"):
-                load_session(selected_session)
+        st.subheader("Lưu và tải phiên trò chuyện")
+        if st.button("💾 Lưu"):
+            session_data = save_chat_session()
+            st.download_button(
+                label="📥 Tải xuống phiên trò chuyện",
+                data=session_data,
+                file_name="phien_tro_chuyen.json",
+                mime="application/json"
+            )
+        
+        uploaded_session = st.file_uploader("📤 Tải lên", type=["json"])
+        if uploaded_session is not None:
+            session_data = uploaded_session.getvalue().decode("utf-8")
+            load_chat_session(session_data)
+            st.success("Đã tải phiên trò chuyện thành công!")
 
-        # Tìm kiếm trong lịch sử trò chuyện
-        search_query = st.text_input("Tìm kiếm trong lịch sử trò chuyện")
-        if search_query:
-            search_results = search_chat_history(search_query)
-            if search_results:
-                st.write("Kết quả tìm kiếm:")
-                for result in search_results:
-                    st.write(f"{result['role']}: {result['content'][:100]}...")
-            else:
-                st.write("Không tìm thấy kết quả.")
+        st.subheader("Thông tin Mô hình")
+        st.info(f"""
+        - 🤖 Mô hình: {st.session_state.model_config['model_name']}
+        - 🌡️ Độ sáng tạo: {st.session_state.model_config['temperature']:.2f}
+        - 🎯 Top P: {st.session_state.model_config['top_p']:.2f}
+        - 🔝 Top K: {st.session_state.model_config['top_k']}
+        - 📏 Số token tối đa: {st.session_state.model_config['max_output_tokens']}
+        - 🧠 Số lượng tin nhắn trong lịch sử: {st.session_state.max_history}
+        - 💬 Tổng số tin nhắn: {len(st.session_state.messages)}
+        - 🔢 Tổng số token: {st.session_state.total_tokens}
+        """)
 
-# Nội dung chính (với các cải tiến)
+        # Thanh tiến trình token
+        st.subheader("Sử dụng Token")
+        progress = st.session_state.total_tokens / MAX_TOKENS
+        st.progress(progress)
+        st.text(f"{st.session_state.total_tokens}/{MAX_TOKENS} tokens đã sử dụng")
+
+# Nội dung chính
 st.title("🚀 Gemini Agent")
 st.caption("Trải nghiệm sức mạnh của các mô hình Gemini mới nhất với tùy chỉnh nâng cao. 🌟")
 
-st.write(f"Phiên hiện tại: {st.session_state.current_session}")
-
 if api_key:
-    if len(api_key) > 10:  # Kiểm tra đơn giản về tính hợp lệ của API key
+    if is_valid_api_key(api_key):
         st.session_state.api_key = api_key
         model = load_model(api_key, st.session_state.model_config["model_name"])
         
@@ -366,7 +292,7 @@ if api_key:
                     
                     info_text = f"{timestamp} | Tokens: {tokens}"
                     if processing_time and msg["role"] == "assistant":
-                        formatted_time = f"{processing_time:.1f}s"
+                        formatted_time = format_processing_time(processing_time)
                         info_text += f" | {formatted_time}"
                     
                     st.markdown(f"<div class='timestamp'>{info_text}</div>", unsafe_allow_html=True)
@@ -394,7 +320,7 @@ if api_key:
                     if response:
                         st.markdown(response)
                         timestamp = datetime.now().strftime("%H:%M:%S")
-                        formatted_time = f"{processing_time:.1f}s"
+                        formatted_time = format_processing_time(processing_time)
                         st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | {formatted_time}</div>", unsafe_allow_html=True)
                         
                         st.session_state.chat_history.append({
@@ -409,31 +335,13 @@ if api_key:
             if st.session_state.image and not prompt:
                 st.warning("⚠️ Vui lòng nhập câu hỏi để đi kèm với hình ảnh.")
         else:
-            handle_error("Không thể khởi tạo mô hình. Vui lòng kiểm tra API key và thử lại.")
+            st.error("❌ Không thể khởi tạo mô hình. Vui lòng kiểm tra API key và thử lại.")
     else:
-        handle_error("API key không hợp lệ. Vui lòng nhập một Google API Key hợp lệ.")
+        st.error("❌ API key không hợp lệ. Vui lòng nhập một Google API Key hợp lệ.")
 else:
     st.warning("🔑 Vui lòng nhập Google API Key của bạn ở thanh bên để bắt đầu trò chuyện.")
-
-# Hiển thị biểu đồ thống kê
-if st.button("📊 Hiển thị thống kê"):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-    
-    # Biểu đồ phân bố tin nhắn
-    roles = [msg['role'] for msg in st.session_state.chat_history]
-    role_counts = {role: roles.count(role) for role in set(roles)}
-    ax1.pie(role_counts.values(), labels=role_counts.keys(), autopct='%1.1f%%')
-    ax1.set_title('Phân bố tin nhắn')
-    
-    # Biểu đồ sử dụng token
-    tokens = [msg.get('tokens', 0) for msg in st.session_state.chat_history]
-    ax2.plot(range(len(tokens)), tokens)
-    ax2.set_title('Sử dụng token theo thời gian')
-    ax2.set_xlabel('Số thứ tự tin nhắn')
-    ax2.set_ylabel('Số token')
-    
-    st.pyplot(fig)
 
 # Footer
 st.markdown("---")
 st.markdown("Được phát triển với ❤️ bởi tanbaycu")
+
