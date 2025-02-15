@@ -2,3 +2,5 @@ streamlit
 google-genai
 google.generativeai
 tiktoken
+cryptography
+matplotlib
