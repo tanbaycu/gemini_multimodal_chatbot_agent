@@ -51,45 +51,237 @@ GEMINI_MODELS = [
 
 MAX_TOKENS = 8192
 
-# CSS tùy chỉnh
+# CSS tùy chỉnh với hiệu ứng nâng cao
 def get_custom_css():
     return f"""
 <style>
-    .stButton > button {{width: 100%;}}
-    .stTextInput > div > div > input {{background-color: {'#f0f2f6' if st.session_state.theme == 'light' else '#2b313e'};}}
-    .sidebar .stButton > button {{background-color: #4CAF50; color: white;}}
-    .sidebar .stButton > button:hover {{background-color: #45a049;}}
-    .chat-message {{
-        padding: 1rem; 
-        border-radius: 0.5rem; 
-        margin-bottom: 1rem; 
-        display: flex;
-        font-size: {{'0.8rem' if st.session_state.font_size == 'small' else '1rem' if st.session_state.font_size == 'medium' else '1.2rem'}};
-        animation: fadeIn 0.5s;
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+    :root {{
+        --primary-color: {'#4CAF50' if st.session_state.theme == 'light' else '#45a049'};
+        --background-color: {'#f0f2f6' if st.session_state.theme == 'light' else '#1e1e1e'};
+        --text-color: {'#333' if st.session_state.theme == 'light' else '#fff'};
+        --secondary-color: {'#2196F3' if st.session_state.theme == 'light' else '#1e88e5'};
     }}
+
+    body {{
+        font-family: 'Roboto', sans-serif;
+        background-color: var(--background-color);
+        color: var(--text-color);
+        transition: all 0.3s ease;
+    }}
+
+    .stButton > button {{
+        width: 100%;
+        border-radius: 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background-color: var(--primary-color);
+        color: white;
+    }}
+
+    .stButton > button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        background-color: var(--secondary-color);
+    }}
+
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {{
+        background-color: {'#fff' if st.session_state.theme == 'light' else '#2b313e'};
+        border-radius: 10px;
+        border: 1px solid {'#ddd' if st.session_state.theme == 'light' else '#444'};
+        padding: 10px;
+        transition: all 0.3s ease;
+    }}
+
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {{
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    }}
+
+    .sidebar .stButton > button {{
+        background-color: var(--primary-color);
+        color: white;
+    }}
+
+    .sidebar .stButton > button:hover {{
+        background-color: var(--secondary-color);
+    }}
+
+    .chat-message {{
+        padding: 1.5rem;
+        border-radius: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        animation: fadeInUp 0.5s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }}
+
+    .chat-message:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }}
+
+    @keyframes fadeInUp {{
+        0% {{ opacity: 0; transform: translateY(20px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+
+    .chat-message.user {{
+        background-color: {'#e6f3ff' if st.session_state.theme == 'light' else '#2b313e'};
+        border-top-left-radius: 0;
+    }}
+
+    .chat-message.bot {{
+        background-color: {'#f0f0f0' if st.session_state.theme == 'light' else '#3c4354'};
+        border-top-right-radius: 0;
+    }}
+
+    .chat-message .avatar {{
+        width: 15%;
+        padding-right: 1rem;
+    }}
+
+    .chat-message .avatar img {{
+        max-width: 50px;
+        max-height: 50px;
+        border-radius: 50%;
+        object-fit: cover;
+        animation: pulse 2s infinite;
+    }}
+
+    @keyframes pulse {{
+        0% {{ transform: scale(1); }}
+        50% {{ transform: scale(1.05); }}
+        100% {{ transform: scale(1); }}
+    }}
+
+    .chat-message .message {{
+        width: 85%;
+        padding: 0 1.5rem;
+        color: var(--text-color);
+    }}
+
+    .chat-message .timestamp {{
+        font-size: 0.8em;
+        color: {'#888' if st.session_state.theme == 'light' else '#aaa'};
+        text-align: right;
+        margin-top: 0.5rem;
+    }}
+
+    .token-info {{
+        font-size: 0.8em;
+        color: {'#888' if st.session_state.theme == 'light' else '#aaa'};
+        margin-top: 0.5rem;
+        text-align: right;
+    }}
+
+    .stAlert {{
+        animation: slideIn 0.5s ease;
+        border-radius: 10px;
+    }}
+
+    @keyframes slideIn {{
+        0% {{ transform: translateY(-100%); opacity: 0; }}
+        100% {{ transform: translateY(0); opacity: 1; }}
+    }}
+
+    .stSelectbox, .stSlider, .stNumberInput {{
+        animation: fadeIn 0.5s ease;
+    }}
+
     @keyframes fadeIn {{
         0% {{ opacity: 0; }}
         100% {{ opacity: 1; }}
     }}
-    .chat-message.user {{background-color: {'#e6f3ff' if st.session_state.theme == 'light' else '#2b313e'};}}
-    .chat-message.bot {{background-color: {'#f0f0f0' if st.session_state.theme == 'light' else '#3c4354'};}}
-    .chat-message .avatar {{width: 15%; padding-right: 0.5rem;}}
-    .chat-message .avatar img {{max-width: 40px; max-height: 40px; border-radius: 50%;}}
-    .chat-message .message {{width: 85%; padding: 0 1.5rem;}}
-    .chat-message .timestamp {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; text-align: right; margin-top: 0.5rem;}}
-    .token-info {{font-size: 0.8em; color: {'#a0a0a0' if st.session_state.theme == 'light' else '#cccccc'}; margin-top: 0.5rem;}}
-    body {{background-color: {'#ffffff' if st.session_state.theme == 'light' else '#1e1e1e'}; color: {'#000000' if st.session_state.theme == 'light' else '#ffffff'};}}
-    .stAlert {{animation: slideIn 0.5s;}}
-    @keyframes slideIn {{
-        0% {{ transform: translateY(-100%); }}
-        100% {{ transform: translateY(0); }}
+
+    .stChatInput {{
+        margin-top: 1rem;
+    }}
+
+    .stChatInput > div > div > input {{
+        border-radius: 20px;
+        padding: 10px 20px;
+        border: 2px solid var(--primary-color);
+        transition: all 0.3s ease;
+    }}
+
+    .stChatInput > div > div > input:focus {{
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+    }}
+
+    .stFileUploader > div > div > button {{
+        background-color: var(--secondary-color);
+        color: white;
+        border-radius: 20px;
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+    }}
+
+    .stFileUploader > div > div > button:hover {{
+        background-color: var(--primary-color);
+        transform: translateY(-2px);
+    }}
+
+    .streamlit-expanderHeader {{
+        transition: all 0.3s ease;
+    }}
+
+    .streamlit-expanderHeader:hover {{
+        background-color: {'#e0e0e0' if st.session_state.theme == 'light' else '#2b313e'};
+    }}
+
+    /* Hiệu ứng loading */
+    @keyframes spin {{
+        0% {{ transform: rotate(0deg); }}
+        100% {{ transform: rotate(360deg); }}
+    }}
+
+    .loading-spinner {{
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }}
+
+    /* Hiệu ứng highlight cho các phần tử quan trọng */
+    .highlight {{
+        background-color: {'#ffff99' if st.session_state.theme == 'light' else '#4a4a00'};
+        padding: 5px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+    }}
+
+    .highlight:hover {{
+        background-color: {'#ffffcc' if st.session_state.theme == 'light' else '#5a5a00'};
+    }}
+
+    /* Hiệu ứng cho tiêu đề */
+    .title {{
+        text-align: center;
+        font-size: 2.5em;
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        animation: glow 2s ease-in-out infinite alternate;
+    }}
+
+    @keyframes glow {{
+        from {{ text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px var(--primary-color), 0 0 20px var(--primary-color); }}
+        to {{ text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px var(--primary-color), 0 0 40px var(--primary-color); }}
     }}
 </style>
 """
 
 st.markdown(get_custom_css(), unsafe_allow_html=True)
 
-# Các hàm tiện ích
+# Các hàm tiện ích (giữ nguyên như cũ)
 @st.cache_resource
 def load_model(api_key, model_name):
     try:
@@ -104,7 +296,7 @@ def get_image_download_link(_img, filename, text):
     buffered = io.BytesIO()
     _img.save(buffered, format="PNG")
     img_str = base64.b64encode(buffered.getvalue()).decode()
-    href = f'<a href="data:file/png;base64,{img_str}" download="{filename}">{text}</a>'
+    href = f'<a href="data:file/png;base64,{img_str}" download="{filename}" class="highlight">{text}</a>'
     return href
 
 def get_chat_history():
@@ -153,13 +345,18 @@ def handle_user_input(user_input, model):
                     max_output_tokens=st.session_state.model_config["max_output_tokens"],
                 )
             )
+        
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+        
         response_tokens = count_tokens(response.text)
         st.session_state.total_tokens += response_tokens
         processing_time = time.time() - start_time
-        return response.text, response_tokens, processing_time
+        pass
     except Exception as e:
         st.error(f"Lỗi tạo phản hồi: {str(e)}")
-        return None, 0, 0
+        yield "Đã xảy ra lỗi khi tạo phản hồi."
 
 def sanitize_input(text):
     text = re.sub('<[^<]+?>', '', text)
@@ -267,40 +464,38 @@ def send_email(to_email, subject, body):
         st.error(f"Lỗi gửi email: {str(e)}")
         return False
 
-
-
 # Thanh bên
 with st.sidebar:
-    st.title("Cài đặt")
+    st.title("🛠️ Cài đặt")
     
     if 'user' not in st.session_state:
         st.session_state.user = None
 
     if not st.session_state.user:
-        tab1, tab2 = st.tabs(["Đăng nhập", "Đăng ký"])
+        tab1, tab2 = st.tabs(["🔑 Đăng nhập", "📝 Đăng ký"])
         
         with tab1:
-            login_username = st.text_input("Tên đăng nhập", key="login_username")
-            login_password = st.text_input("Mật khẩu", type="password", key="login_password")
-            if st.button("Đăng nhập"):
+            login_username = st.text_input("👤 Tên đăng nhập", key="login_username")
+            login_password = st.text_input("🔒 Mật khẩu", type="password", key="login_password")
+            if st.button("🚀 Đăng nhập", key="login_button"):
                 api_key, email = authenticate_user(login_username, login_password)
                 if api_key:
                     st.session_state.user = login_username
                     st.session_state.api_key = api_key
                     st.session_state.email = email
-                    st.success("Đăng nhập thành công!")
+                    st.success("✅ Đăng nhập thành công!")
                     st.rerun()
                 else:
-                    st.error("Đăng nhập thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu.")
+                    st.error("❌ Đăng nhập thất bại. Vui lòng kiểm tra lại tên đăng nhập và mật khẩu.")
         
         with tab2:
-            reg_username = st.text_input("Tên đăng nhập", key="reg_username")
-            reg_password = st.text_input("Mật khẩu", type="password", key="reg_password")
-            reg_email = st.text_input("Email", key="reg_email")
-            reg_api_key = st.text_input("Google API Key", type="password", key="reg_api_key")
-            if st.button("Đăng ký"):
+            reg_username = st.text_input("👤 Tên đăng nhập", key="reg_username")
+            reg_password = st.text_input("🔒 Mật khẩu", type="password", key="reg_password")
+            reg_email = st.text_input("📧 Email", key="reg_email")
+            reg_api_key = st.text_input("🔑 Google API Key", type="password", key="reg_api_key")
+            if st.button("📝 Đăng ký", key="register_button"):
                 if register_user(reg_username, reg_password, reg_api_key, reg_email):
-                    st.success("Đăng ký thành công! Vui lòng đăng nhập.")
+                    st.success("✅ Đăng ký thành công! Vui lòng đăng nhập.")
                     current_date = datetime.now().strftime("%d/%m/%Y")
                     
                     # Gửi email xác nhận đăng ký
@@ -357,15 +552,15 @@ with st.sidebar:
                     st.error("Đăng ký thất bại. Tên đăng nhập đã tồn tại.")
 
     else:
-        st.sidebar.success(f"Đã đăng nhập: {st.session_state.user}")
-        if st.sidebar.button("Đăng xuất"):
+        st.sidebar.success(f"👋 Chào mừng, {st.session_state.user}!")
+        if st.sidebar.button("🚪 Đăng xuất", key="logout_button"):
             st.session_state.user = None
             st.session_state.api_key = None
             st.session_state.email = None
             st.rerun()
 
         with st.expander("🛠️ Tùy chỉnh Mô hình", expanded=False):
-            selected_model = st.selectbox("Chọn mô hình Gemini", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
+            selected_model = st.selectbox("🤖 Chọn mô hình Gemini", GEMINI_MODELS, index=GEMINI_MODELS.index(st.session_state.model_config["model_name"]))
             st.session_state.model_config["model_name"] = selected_model
             
             st.session_state.model_config["temperature"] = st.slider("🌡️ Độ sáng tạo", min_value=0.0, max_value=1.0, value=st.session_state.model_config["temperature"], step=0.1)
@@ -374,7 +569,7 @@ with st.sidebar:
             st.session_state.model_config["max_output_tokens"] = st.number_input("📏 Số token tối đa", min_value=1, max_value=8192, value=st.session_state.model_config["max_output_tokens"])
         
         with st.expander("📝 Tùy chỉnh Prompt", expanded=False):
-            st.session_state.system_prompt = st.text_area("System Prompt", value=st.session_state.system_prompt, height=100)
+            st.session_state.system_prompt = st.text_area("🤖 System Prompt", value=st.session_state.system_prompt, height=100)
         
         st.session_state.max_history = st.slider("🧠 Số lượng tin nhắn tối đa trong lịch sử", min_value=1, max_value=100, value=5)
         
@@ -386,11 +581,11 @@ with st.sidebar:
             st.markdown(get_image_download_link(st.session_state.image, "hình_ảnh_đã_tải.png", "📥 Tải xuống hình ảnh"), unsafe_allow_html=True)
 
         with st.expander("☰ Tùy chọn nâng cao", expanded=False):
-            st.subheader("Quản lý phiên trò chuyện")
+            st.subheader("📊 Quản lý phiên trò chuyện")
             
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("🗑️ Xóa", key="clear_history"):
+                if st.button("🗑️ Xóa lịch sử", key="clear_history"):
                     st.session_state.messages = []
                     st.session_state.chat_history = []
                     st.session_state.image = None
@@ -398,7 +593,7 @@ with st.sidebar:
                     st.rerun()
 
             with col2:
-                if st.button("📥 Xuất", key="export_history"):
+                if st.button("📥 Xuất lịch sử", key="export_history"):
                     chat_history = "\n".join([f"{msg['role']} ({msg.get('timestamp', 'N/A')}): {msg['content']}" for msg in st.session_state.chat_history])
                     st.download_button(
                         label="📥 Tải xuống",
@@ -407,8 +602,8 @@ with st.sidebar:
                         mime="text/plain"
                     )
             
-            st.subheader("Lưu và tải phiên trò chuyện")
-            if st.button("💾 Lưu"):
+            st.subheader("💾 Lưu và tải phiên trò chuyện")
+            if st.button("💾 Lưu phiên"):
                 session_data = save_chat_session()
                 st.download_button(
                     label="📥 Tải xuống phiên trò chuyện",
@@ -417,13 +612,13 @@ with st.sidebar:
                     mime="application/json"
                 )
             
-            uploaded_session = st.file_uploader("📤 Tải lên", type=["json"])
+            uploaded_session = st.file_uploader("📤 Tải lên phiên", type=["json"])
             if uploaded_session is not None:
                 session_data = uploaded_session.getvalue().decode("utf-8")
                 load_chat_session(session_data)
-                st.success("Đã tải phiên trò chuyện thành công!")
+                st.success("✅ Đã tải phiên trò chuyện thành công!")
 
-            st.subheader("Thông tin Mô hình")
+            st.subheader("ℹ️ Thông tin Mô hình")
             st.info(f"""
             - 🤖 Mô hình: {st.session_state.model_config['model_name']}
             - 🌡️ Độ sáng tạo: {st.session_state.model_config['temperature']:.2f}
@@ -435,13 +630,13 @@ with st.sidebar:
             - 🔢 Tổng số token: {st.session_state.total_tokens}
             """)
 
-            st.subheader("Sử dụng Token")
+            st.subheader("📊 Sử dụng Token")
             progress = st.session_state.total_tokens / MAX_TOKENS
             st.progress(progress)
             st.text(f"{st.session_state.total_tokens}/{MAX_TOKENS} tokens đã sử dụng")
 
 # Nội dung chính
-st.title("🚀 Gemini Agent")
+st.markdown("<h1 class='title'>🚀 Gemini Agent</h1>", unsafe_allow_html=True)
 st.caption("Trải nghiệm sức mạnh của các mô hình Gemini mới nhất với tùy chỉnh nâng cao. 🌟")
 
 if not st.session_state.user:
@@ -461,7 +656,7 @@ else:
                     info_text = f"{timestamp} | Tokens: {tokens}"
                     if processing_time and msg["role"] == "assistant":
                         formatted_time = format_processing_time(processing_time)
-                        info_text += f" | {formatted_time}"
+                        info_text += f" | ⏱️ {formatted_time}"
                     
                     st.markdown(f"<div class='timestamp'>{info_text}</div>", unsafe_allow_html=True)
 
@@ -483,20 +678,30 @@ else:
                 })
 
                 with st.chat_message("assistant"):
-                    response, response_tokens, processing_time = handle_user_input(prompt, model)
-                    if response:
-                        st.markdown(response)
-                        timestamp = datetime.now().strftime("%H:%M:%S")
-                        formatted_time = format_processing_time(processing_time)
-                        st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | {formatted_time}</div>", unsafe_allow_html=True)
-                        
-                        st.session_state.chat_history.append({
-                            "role": "assistant",
-                            "content": response,
-                            "tokens": response_tokens,
-                            "timestamp": timestamp,
-                            "processing_time": processing_time
-                        })
+                    message_placeholder = st.empty()
+                    full_response = ""
+                    for chunk in handle_user_input(prompt, model):
+                        full_response += chunk
+                        message_placeholder.markdown(full_response)
+                    
+                    
+                    # Extract token and time info
+                    response_tokens = count_tokens(full_response)
+                    processing_time = time.time() - st.session_state.last_request_time
+                    timestamp = datetime.now().strftime("%H:%M:%S")
+                    formatted_time = format_processing_time(processing_time)
+                    st.markdown(f"<div class='timestamp'>{timestamp} | Tokens: {response_tokens} | {formatted_time}</div>", unsafe_allow_html=True)
+
+                    st.session_state.chat_history.append({
+                        "role": "assistant",
+                        "content": full_response,
+                        "tokens": response_tokens,
+                        "timestamp": timestamp,
+                        "processing_time": processing_time
+                    })
+
+            if st.session_state.image and processing_time > 1:
+                st.warning("⚠️ Hình ảnh đã được tải lên nhưng việc xử lý có thể mất nhiều thời gian. Hãy kiên nhẫn chờ đợi.")
 
             if st.session_state.image and not prompt:
                 st.warning("⚠️ Vui lòng nhập câu hỏi để đi kèm với hình ảnh.")
@@ -507,4 +712,10 @@ else:
 
 # Footer
 st.markdown("---")
-st.markdown("Được phát triển với ❤️ bởi tanbaycu")
+st.markdown("<p style='text-align: center;'>Được phát triển với ❤️ bởi tanbaycu</p>", unsafe_allow_html=True)
+
+# Thêm hiệu ứng loading
+if st.session_state.get('is_loading', False):
+    with st.spinner("🔄 Đang xử lý..."):
+        time.sleep(0.1)
+st.session_state.is_loading = False
